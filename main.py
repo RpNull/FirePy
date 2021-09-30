@@ -11,14 +11,14 @@ api_token=''
 
 class Query():    
     def Token():
-        global auth_token
+        global api_token
         api_url="https://api.intelligence.fireeye.com/token"
         headers = {
             'grant_type' : 'client_credentials'
         }
         r = requests.post(api_url, auth=HTTPBasicAuth(api_pub, api_priv), data=headers)
         data = r.json()
-        auth_token = data.get('access_token')
+        api_token = data.get('access_token')
         token_expire = divmod(data.get('expires_in'), 3600)
         return(token_expire)
 
