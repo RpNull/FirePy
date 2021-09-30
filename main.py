@@ -32,13 +32,12 @@ class Query():
         dataset.columns = ["id", "name", "created", "modified", "valid_from", "valid_until", "confidence", "description", "pattern", "labels"]
         dataset.index = pd.RangeIndex(len(dataset.index))
         d = str(datetime.now())
-        out_path = out_path + '/' + d
-        dataset.to_csv(out_path, True)
+        out_file = out_path + d
+        dataset.to_csv(out_file, True)
 
     def Indicator_Query():
-        global auth_token, app_name
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
-        epoch = Epoch_Fetch()
+        epoch = Query.Epoch_Fetch()
         payload = {
             'added_after': '{epoch}',
             'length': '1000',
@@ -56,7 +55,16 @@ class Query():
             raise Exception(r.text)
         if r.status_code == 200:
             data = r.json()
-            Format_Data(data)
+            Query.Format_Data(data)
+
+def main():
+    exp = Query.Token()
+    print(f'Token expires in {exp} hours')
+    try:
+        Query.Indicator_Query()
+    except:
+        print(f'Query Failed')
+
 
 
 
