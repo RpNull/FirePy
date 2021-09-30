@@ -38,3 +38,14 @@ def Epoch_Fetch():
 ## Limitations:
 
 50,000 queries per day, 1000 queries per second. Reference comments in the python file for individual endpoint limitations. All lengths are set to the maximum by default.
+
+## Run as a compiled exe for immutability.
+
+Requires:
+[pyinstaller](https://pyinstaller.readthedocs.io/en/stable/)\
+Packages all dependencies and libraries into a single exe.
+
+```
+pip install pyinstaller
+pyinstaller -F --paths=<your_path>\Lib\site-packages FirePy.py
+```
