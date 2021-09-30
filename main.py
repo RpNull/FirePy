@@ -24,20 +24,26 @@ class Query():
 
     def Epoch_Fetch():
         d = datetime.now()
-        p = (d - timedelta(days=90)).timestamp()
+        p = str((d - timedelta(days=90)).timestamp())
         return p
-
-    def Format_Data(data):
-        dataset = pd.DataFrame(data)
-        dataset.columns = ["id", "name", "created", "modified", "valid_from", "valid_until", "confidence", "description", "pattern", "labels"]
-        dataset.index = pd.RangeIndex(len(dataset.index))
-        d = str(datetime.now())
-        out_file = out_path + d
-        dataset.to_csv(out_file, True)
-
+   
     def Indicator_Query():
+        formatting = [
+            "id", 
+            "name",
+            "created", 
+            "modified",
+            "valid_from", 
+            "valid_until", 
+            "confidence",
+            "description", 
+            "pattern", 
+            "labels"
+        ]
+        pathing = 'Indicator/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
         epoch = Query.Epoch_Fetch()
+        ##API Limitation length:1000 for Indicators
         payload = {
             'added_after': '{epoch}',
             'length': '1000',
@@ -55,7 +61,72 @@ class Query():
             raise Exception(r.text)
         if r.status_code == 200:
             data = r.json()
-            Query.Format_Data(data)
+            DataManager.Format_Data(data, formatting, pathing)
+
+    def Report_Query():
+        formatting =  [
+            "id", 
+            "name", 
+            "labels", 
+            "created", 
+            "modified", 
+            "published", 
+            "object_refs", 
+            "description", 
+            "x_fireeye_com_tracking_info.document_id", 
+            "x_fireeye_com_metadata.report_type", 
+            "x_fireeye_com_metadata.affected_it_systems", 
+            "x_fireeye_com_metadata.risk_rating", 
+            "x_fireeye_com_exploitation_rating", 
+            "x_fireeye_com_metadata.intended_effect", 
+            "x_fireeye_com_additional_description_sections.analysis", 
+            "x_fireeye_com_metadata.target_geographies", 
+            "x_fireeye_com_metadata.affected_industries", 
+            "x_fireeye_com_additional_description_sections.key_points", 
+            "x_fireeye_com_metadata.targeted_information", 
+            "x_fireeye_com_metadata.motivation", 
+            "x_fireeye_com_metadata.subscriptions", 
+            "x_fireeye_com_metadata.source_geographies", 
+            "x_fireeye_com_risk_rating_justification", 
+            "x_fireeye_com_metadata.affected_ot_systems"
+        ]
+        pathing = 'Reports/'
+        api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
+        epoch = Query.Epoch_Fetch()
+        ##API Limitation length:100 for Reports
+        payload = {
+            'added_after': '{epoch}',
+            'length': '100',
+            'match_status': 'active'
+        }
+
+        headers = {
+            'Accept': 'application/stix+json; version=2.1',
+            'X-App-Name': '{app_name}',
+            'Authorization': 'Bearer {auth_token}'
+            }
+
+        r = requests.get(api_url,headers,payload)
+        if r.status_code != 200:
+            raise Exception(r.text)
+        if r.status_code == 200:
+            data = r.json()
+            DataManager.Format_Data(data, formatting, pathing)
+
+
+class DataManager():
+     
+     def Format_Data(data, formatting, pathing):
+        dataset = pd.DataFrame(data)
+        dataset.columns = formatting
+        dataset.index = pd.RangeIndex(len(dataset.index))
+        d = str(datetime.now())
+        out_file = out_path + pathing + d
+        try:
+            dataset.to_csv(out_file, True)
+        except:
+            print(f'Writing to {out_path} failed, please check permissions and write locks.')
+
 
 def main():
     exp = Query.Token()
