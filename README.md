@@ -17,7 +17,7 @@ The APP_NAME variable is used to identify Api activety by FireEye.
 ```
 PUB=FireEyePublicKeyHere
 PRIV=FireEyePrivateKeyHere
-PATH=/Path/To/Output/Here/
+OUTPATH=/Path/To/Output/Here/
 APP_NAME=OrganizationalNameHere
 ```
 Execute the python file FirePy.py

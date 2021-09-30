@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 api_pub=os.getenv('PUB')
 api_priv=os.getenv('PRIV')
-out_path=os.getenv('PATH')
+out_path=os.getenv('OUTPATH')
 app_name=os.getenv('APP_NAME')
 api_token=''
 
@@ -43,7 +43,7 @@ class Query():
         pathing = 'Indicator/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
         epoch = Query.Epoch_Fetch()
-        ##API Limitation length:1000 for Indicators
+        ##APIv3 Limitation length:1000 for Indicators
         payload = {
             'added_after': '{epoch}',
             'length': '1000',
@@ -93,7 +93,7 @@ class Query():
         pathing = 'Reports/'
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
         epoch = Query.Epoch_Fetch()
-        ##API Limitation length:100 for Reports
+        ##APIv3 Limitation length:100 for Reports
         payload = {
             'added_after': '{epoch}',
             'length': '100',
