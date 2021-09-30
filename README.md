@@ -1,4 +1,4 @@
-Basic pythonic implementation for quering the FireEye Intelligence api for mass data acquisition for localized parsing.\
+Basic pythonic implementation for querying the FireEye Intelligence api for mass data acquisition for localized parsing.\
 Default implementation pulls the last 90 days of IOC and Reports.
 
 ## Leverages:
