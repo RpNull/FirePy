@@ -26,14 +26,6 @@ Execute the python file FirePy.py
 
 Output will be directed to the path declared in your .env file, seperated by asset leveraged, and saved to a csv file with todays date as it's name.
 
-## Customization:
-To modify the number of days scraped, change the "days=" variable in the Epoch_Fetch function.
-```
-def Epoch_Fetch():
-        d = datetime.now()
-        p = str((d - timedelta(days=90)).timestamp())
-        return p
-```
 
 ## Limitations:
 

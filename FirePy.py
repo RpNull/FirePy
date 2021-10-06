@@ -8,6 +8,7 @@ api_priv=os.getenv('PRIV')
 out_path=os.getenv('OUTPATH')
 app_name=os.getenv('APP_NAME')
 api_token=''
+qeury_days=''
 
 class Query():    
     def Token():
@@ -24,7 +25,7 @@ class Query():
 
     def Epoch_Fetch():
         d = datetime.now()
-        p = str((d - timedelta(days=90)).timestamp())
+        p = str((d - timedelta(days=query_days)).timestamp())
         return p
    
     def Indicator_Query():
@@ -128,15 +129,38 @@ class DataManager():
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
 
 
+def menu():
+    looping = True
+    while looping:
+        choice=str(input(
+            '''1) Query Indicators\n
+            2) Query Reports \n
+            3) Query <PLACEHOLDER>\n
+            x) Exit program\n
+            '''
+        )).capitalize
+        if choice == 1:
+            looping = False
+            query_days = input('How many days would you like to query? \n')
+            try:
+                Query.Indicator_Query()
+            except:
+                print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+        elif choice == 2:
+            looping = False
+            query_days = input('How many days would you like to query? \n')
+            try:
+                Query.Report_Query()
+            except:
+                print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+        elif choice == 'X':
+            looping = False
+            print(f'Exiting.\n')
+        else:
+            print(f'{choice} is not a valid option, please make a selection\n')
+
 def main():
+    global query_days
     exp = Query.Token()
-    print(f'Token expires in {exp} hours')
-    try:
-        Query.Indicator_Query()
-    except:
-        print(f'Query Failed')
-
-
-
-
-
+    print(f'Token expires in {exp} hours\n')
+    menu()
