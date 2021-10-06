@@ -130,6 +130,7 @@ class DataManager():
 
 
 def menu():
+    global query_days
     looping = True
     while looping:
         choice=str(input(
