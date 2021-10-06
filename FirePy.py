@@ -141,14 +141,12 @@ def menu():
             '''
         )).capitalize
         if choice == 1:
-            looping = False
             query_days = input('How many days would you like to query? \n')
             try:
                 Query.Indicator_Query()
             except:
                 print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
         elif choice == 2:
-            looping = False
             query_days = input('How many days would you like to query? \n')
             try:
                 Query.Report_Query()
@@ -157,11 +155,15 @@ def menu():
         elif choice == 'X':
             looping = False
             print(f'Exiting.\n')
+            sys.exit(0)
         else:
             print(f'{choice} is not a valid option, please make a selection\n')
 
 def main():
-    global query_days
-    exp = Query.Token()
+    try:
+        exp = Query.Token()
+    except:
+        print(f'Unable to fetch token, please confirm required variables are placed in your .env file')
+        sys.exit(0)
     print(f'Token expires in {exp} hours\n')
     menu()
