@@ -3,6 +3,14 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 
+#        File Name      : FirePy.py
+#        Version        : v.0.1
+#        Author         : RpNull
+#        Prerequisite   : Python3
+#        Created        : 30 Sep 21
+#        Change Date    : 6 Oct 21
+#        Online version : github.com/RpNull/FirePy
+
 api_pub=os.getenv('PUB')
 api_priv=os.getenv('PRIV')
 out_path=os.getenv('OUTPATH')
