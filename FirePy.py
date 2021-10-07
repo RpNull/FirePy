@@ -8,25 +8,8 @@ api_priv=os.getenv('PRIV')
 out_path=os.getenv('OUTPATH')
 app_name=os.getenv('APP_NAME')
 api_token=''
-qeury_days=''
 
 class Query():    
-    def Token():
-        global api_token
-        api_url="https://api.intelligence.fireeye.com/token"
-        headers = {
-            'grant_type' : 'client_credentials'
-        }
-        r = requests.post(api_url, auth=HTTPBasicAuth(api_pub, api_priv), data=headers)
-        data = r.json()
-        api_token = data.get('access_token')
-        token_expire = divmod(data.get('expires_in'), 3600)
-        return(token_expire)
-
-    def Epoch_Fetch():
-        d = datetime.now()
-        p = str((d - timedelta(days=query_days)).timestamp())
-        return p
    
     def Indicator_Query():
         formatting = [
@@ -43,7 +26,7 @@ class Query():
         ]
         pathing = 'Indicator/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
-        epoch = Query.Epoch_Fetch()
+        epoch = DataManager.Epoch_Fetch()
         ##APIv3 Limitation length:1000 for Indicators
         payload = {
             'added_after': '{epoch}',
@@ -93,7 +76,7 @@ class Query():
         ]
         pathing = 'Reports/'
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
-        epoch = Query.Epoch_Fetch()
+        epoch = DataManager.Epoch_Fetch()
         ##APIv3 Limitation length:100 for Reports
         payload = {
             'added_after': '{epoch}',
@@ -116,6 +99,24 @@ class Query():
 
 
 class DataManager():
+
+     def Token():
+        global api_token
+        api_url="https://api.intelligence.fireeye.com/token"
+        headers = {
+            'grant_type' : 'client_credentials'
+        }
+        r = requests.post(api_url, auth=HTTPBasicAuth(api_pub, api_priv), data=headers)
+        data = r.json()
+        api_token = data.get('access_token')
+        token_expire = divmod(data.get('expires_in'), 3600)
+        return(token_expire)
+
+     def Epoch_Fetch(query_days):
+        d = datetime.now()
+        p = str((d - timedelta(days=query_days)).timestamp())
+        return p
+
      
      def Format_Data(data, formatting, pathing):
         dataset = pd.DataFrame(data)
@@ -128,42 +129,41 @@ class DataManager():
         except:
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
 
-
-def menu():
-    global query_days
-    looping = True
-    while looping:
-        choice=str(input(
-            '''1) Query Indicators\n
-            2) Query Reports \n
-            3) Query <PLACEHOLDER>\n
-            x) Exit program\n
-            '''
-        )).capitalize
-        if choice == 1:
-            query_days = input('How many days would you like to query? \n')
-            try:
-                Query.Indicator_Query()
-            except:
-                print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-        elif choice == 2:
-            query_days = input('How many days would you like to query? \n')
-            try:
-                Query.Report_Query()
-            except:
-                print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-        elif choice == 'X':
-            looping = False
-            print(f'Exiting.\n')
-            sys.exit(0)
-        else:
-            print(f'{choice} is not a valid option, please make a selection\n')
+class Admin():
+    def menu():
+        looping = True
+        while looping:
+            choice=str(input(
+                '''1) Query Indicators\n
+                2) Query Reports \n
+                3) Query <PLACEHOLDER>\n
+                x) Exit program\n
+                '''
+            )).capitalize
+            if choice == 1:
+                query_days = input('How many days would you like to query? \n')
+                try:
+                    Query.Indicator_Query(query_days)
+                except:
+                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+            elif choice == 2:
+                query_days = input('How many days would you like to query? \n')
+                try:
+                    Query.Report_Query()
+                except:
+                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+            elif choice == 'X':
+                looping = False
+                print(f'Exiting.\n')
+                sys.exit(0)
+            else:
+                print(f'{choice} is not a valid option, please make a selection\n')
 
 def main():
     try:
-        exp = Query.Token()
+        exp = DataManager.Token()
     except:
         print(f'Unable to fetch token, please confirm required variables are placed in your .env file')
         sys.exit(0)
     print(f'Token expires in {exp} hours\n')
-    menu()
+    Admin.menu()
