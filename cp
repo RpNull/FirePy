@@ -1,6 +1,7 @@
 #! /usr/env/python
-import os, requests, json, sys
+import os, requests, json, sys, csv
 import pandas as pd
+import pprint
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -39,23 +40,25 @@ class Query():
         epoch = DataManager.Epoch_Fetch(query_days)
         ##APIv3 Limitation length:1000 for Indicators
         payload = {
-            'added_after': '{epoch}',
+            'added_after': 'epoch',
             'length': '1000',
             'match_status': 'active'
         }
         print(f'{api_token}')
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {api_token}'
+            'X-App-Name': f'{app_name}',
+            'Authorization': f'Bearer {api_token}'
             }
-
+        print(f'{xheaders}')
         r = requests.get(api_url, headers=xheaders, data=payload)
         if r.status_code != 200:
             raise Exception(r.text)
         if r.status_code == 200:
             data = r.json()
-            DataManager.Format_Data(data, formatting, pathing)
+            df = pd.json_normalize(data["objects"])
+            df[formatting]
+           # DataManager.Format_Data(data, formatting, pathing)
 
     def Report_Query(query_days):
         formatting =  [
@@ -96,8 +99,8 @@ class Query():
 
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {api_token}'
+            'X-App-Name': f'{app_name}',
+            'Authorization': f'Bearer {api_token}'
             }
 
         r = requests.get(api_url,headers=xheaders,data=payload)
@@ -111,8 +114,8 @@ class Query():
         api_url = 'https://api.intelligence.fireeye.com/permissions'
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {api_token}'
+            'X-App-Name': 'f{app_name}',
+            'Authorization': f'Bearer {api_token}'
             }
         r = requests.get(api_url, headers=xheaders)
         data = r.json
@@ -141,8 +144,12 @@ class DataManager():
 
      
      def Format_Data(data, formatting, pathing):
-        dataset = pd.DataFrame(data)
-        dataset.columns = formatting
+        named_list = []
+        for name in data['Objects']:
+            named_list.append(data['Name'])
+
+        dataset = pd.DataFrame(data, columns = formatting)
+        #dataset.columns = formatting
         dataset.index = pd.RangeIndex(len(dataset.index))
         d = str(datetime.now())
         out_file = out_path + pathing + d
@@ -150,7 +157,6 @@ class DataManager():
             dataset.to_csv(out_file, True)
         except:
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
-
 class Admin():
     def menu():
         looping = True
@@ -199,3 +205,4 @@ def main():
 
 
 main()
+
