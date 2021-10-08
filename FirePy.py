@@ -1,25 +1,28 @@
-import os, requests, json
+#! /usr/env/python
+
+import os, requests, json, sys
 import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
-
+from dotenv import load_dotenv
 #        File Name      : FirePy.py
-#        Version        : v.0.1
+#        Version        : v.0.12
 #        Author         : RpNull
 #        Prerequisite   : Python3
 #        Created        : 30 Sep 21
-#        Change Date    : 6 Oct 21
+#        Change Date    : 8 Oct 21
 #        Online version : github.com/RpNull/FirePy
 
-api_pub=os.getenv('PUB')
-api_priv=os.getenv('PRIV')
-out_path=os.getenv('OUTPATH')
-app_name=os.getenv('APP_NAME')
+load_dotenv()
+api_pub=os.environ.get('PUB')
+api_priv=os.environ.get('PRIV')
+out_path=os.environ.get('OUTPATH')
+app_name=os.environ.get('APP_NAME')
 api_token=''
 
 class Query():    
    
-    def Indicator_Query():
+    def Indicator_Query(query_days):
         formatting = [
             "id", 
             "name",
@@ -32,30 +35,29 @@ class Query():
             "pattern", 
             "labels"
         ]
-        pathing = 'Indicator/'
+        pathing = 'Indicators/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
-        epoch = DataManager.Epoch_Fetch()
+        epoch = DataManager.Epoch_Fetch(query_days)
         ##APIv3 Limitation length:1000 for Indicators
         payload = {
-            'added_after': '{epoch}',
+            'added_after': f'{epoch}',
             'length': '1000',
             'match_status': 'active'
         }
-
-        headers = {
+        xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {auth_token}'
+            'X-App-Name': f'{app_name}',
+            'Authorization': f'Bearer {api_token}'
             }
-
-        r = requests.get(api_url,headers,payload)
+        r = requests.get(api_url, headers=xheaders, data=payload)
         if r.status_code != 200:
             raise Exception(r.text)
         if r.status_code == 200:
             data = r.json()
-            DataManager.Format_Data(data, formatting, pathing)
+            objects = data['objects']
+            DataManager.Format_Data(objects, formatting, pathing)
 
-    def Report_Query():
+    def Report_Query(query_days):
         formatting =  [
             "id", 
             "name", 
@@ -84,27 +86,39 @@ class Query():
         ]
         pathing = 'Reports/'
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
-        epoch = DataManager.Epoch_Fetch()
+        epoch = DataManager.Epoch_Fetch(query_days)
         ##APIv3 Limitation length:100 for Reports
         payload = {
-            'added_after': '{epoch}',
+            'added_after': f'{epoch}',
             'length': '100',
             'match_status': 'active'
         }
 
-        headers = {
+        xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {auth_token}'
+            'X-App-Name': f'{app_name}',
+            'Authorization': f'Bearer {api_token}'
             }
 
-        r = requests.get(api_url,headers,payload)
+        r = requests.get(api_url,headers=xheaders,data=payload)
         if r.status_code != 200:
             raise Exception(r.text)
         if r.status_code == 200:
             data = r.json()
-            DataManager.Format_Data(data, formatting, pathing)
+            objects = data['objects']
+            DataManager.Format_Data(objects, formatting, pathing)
+        
 
+    def Permissions_Query():
+        api_url = 'https://api.intelligence.fireeye.com/permissions'
+        xheaders = {
+            'Accept': 'application/stix+json; version=2.1',
+            'X-App-Name': 'f{app_name}',
+            'Authorization': f'Bearer {api_token}'
+            }
+        r = requests.get(api_url, headers=xheaders)
+        data = r.json()
+        print(f'{data}')
 
 class DataManager():
 
@@ -118,6 +132,8 @@ class DataManager():
         data = r.json()
         api_token = data.get('access_token')
         token_expire = divmod(data.get('expires_in'), 3600)
+        p = data.get("token_type")
+        print(f'Token Type: {p}\nToken Value = {api_token}')
         return(token_expire)
 
      def Epoch_Fetch(query_days):
@@ -128,37 +144,56 @@ class DataManager():
      
      def Format_Data(data, formatting, pathing):
         dataset = pd.DataFrame(data)
-        dataset.columns = formatting
-        dataset.index = pd.RangeIndex(len(dataset.index))
-        d = str(datetime.now())
-        out_file = out_path + pathing + d
+        d = datetime.now().strftime("%Y%m%d-%H%M%S")
+        out_file = f"{out_path}{pathing}{d}.csv"
+        print(out_file)
         try:
-            dataset.to_csv(out_file, True)
-        except:
+            dataset.to_csv(out_file)
+        except Exception as e:
+            print(e)
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
 
+
 class Admin():
+    
+    def path_check():
+        r = os.path.isdir(f'{out_path}/Reports')
+        i = os.path.isdir(f'{out_path}/Indicators')
+        if r is False:
+            os.mkdir(f'{out_path}/Reports')
+        if i is False:
+            os.mkdir(f'{out_path}/Indicators')
+    
     def menu():
         looping = True
         while looping:
-            choice=str(input(
-                '''1) Query Indicators\n
-                2) Query Reports \n
-                3) Query <PLACEHOLDER>\n
-                x) Exit program\n
+            choice=input(
                 '''
-            )).capitalize
-            if choice == 1:
-                query_days = input('How many days would you like to query? \n')
+                1) Query Indicators\n
+                2) Query Reports\n
+                3) Query Permissions (Troubleshooting)\n
+                X) Exit program\n
+                '''
+            )
+            if choice == '1':
+                query_days = int(input('How many days would you like to query? \n'))
                 try:
                     Query.Indicator_Query(query_days)
-                except:
+                except Exception as e:
+                    print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-            elif choice == 2:
-                query_days = input('How many days would you like to query? \n')
+            elif choice == '2':
+                query_days = int(input('How many days would you like to query? \n'))
                 try:
-                    Query.Report_Query()
-                except:
+                    Query.Report_Query(query_days)
+                except Exception as e:
+                    print(e)
+                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+            elif choice == '3':
+                try:
+                    Query.Permissions_Query()
+                except Exception as e:
+                    print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == 'X':
                 looping = False
@@ -168,6 +203,7 @@ class Admin():
                 print(f'{choice} is not a valid option, please make a selection\n')
 
 def main():
+    Admin.path_check()
     try:
         exp = DataManager.Token()
     except:
@@ -175,3 +211,6 @@ def main():
         sys.exit(0)
     print(f'Token expires in {exp} hours\n')
     Admin.menu()
+
+
+main()

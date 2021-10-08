@@ -8,11 +8,13 @@ Default implementation pulls the last 90 days of IOC and Reports.
 ## Requires:
   Python3.9 or newer\
   [pandas-1.3.3](https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html)
-  
-`pip install pandas`
+  python-dotenv
+
+`pip3 install python-dotenv`  
+`pip3 install pandas`
 
 ## Usage:
-Add required variables to your .env file.\
+Add required variables to your .env file, in the same directory as FirePy.\
 The APP_NAME variable is used to identify Api activety by FireEye.
 ```
 PUB=FireEyePublicKeyHere
