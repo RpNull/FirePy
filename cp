@@ -1,3 +1,4 @@
+#! /usr/env/python
 import os, requests, json, sys
 import pandas as pd
 from requests.auth import HTTPBasicAuth
@@ -42,11 +43,11 @@ class Query():
             'length': '1000',
             'match_status': 'active'
         }
-
+        print(f'{api_token}')
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {auth_token}'
+            'Authorization': 'Bearer {api_token}'
             }
 
         r = requests.get(api_url, headers=xheaders, data=payload)
@@ -96,7 +97,7 @@ class Query():
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {auth_token}'
+            'Authorization': 'Bearer {api_token}'
             }
 
         r = requests.get(api_url,headers=xheaders,data=payload)
@@ -107,11 +108,11 @@ class Query():
             DataManager.Format_Data(data, formatting, pathing)
 
     def Permissions_Query():
-        api_url = 'https://api/intelligence.fireeye.com/permissions'
+        api_url = 'https://api.intelligence.fireeye.com/permissions'
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': '{app_name}',
-            'Authorization': 'Bearer {auth_token}'
+            'Authorization': 'Bearer {api_token}'
             }
         r = requests.get(api_url, headers=xheaders)
         data = r.json
