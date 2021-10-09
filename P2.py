@@ -74,6 +74,7 @@ class Query():
                 print(r.status_code)
         if r.status_code == 200:
                 data = r.json()
+                print(type(data))
                 objects = data['objects']
                 DataManager.Format_Data(objects, formatting, pathing)
                 api_url = r.links['next']['url']
