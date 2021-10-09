@@ -23,20 +23,23 @@ api_token=''
 queries = 0
 class Query():
 
-    def Query_Paging(objects, api_url, headers, formatting, pathing):
-        while(True):
-            r = requests.get(api_url, headers=headers)
-            if r.status_code == 204:
-                data = r.json()
-                objects.append(data['objects'])
-                DataManager.Format_data(objects, formatting, pathing)
-                print('Query Complete')
-            if r.status_code != 200:
-                print(r.status_code)
-            if r.status_code == 200:
-                data = r.json()
-                objects.append(data['objects'])
-                api_url = r.links['next']['url']
+    def query_paginated(url: str, xheaders) -> list:
+        global queries
+        output_list = []
+        while url:
+            response = requests.get(url, headers = xheaders)
+            data = response.json()
+            output_list.extend(data.get("objects", []))
+            if not response.links or response.status_code == 204:
+                print(response.status_code)
+                break
+
+            url = response.links["next"]["url"]
+            queries += 1
+            stat = len(output_list)
+            print(f'Queries made: {queries}\nObjects retrieved: {stat}')
+        print(len(output_list))
+        return output_list
 
 
     def Indicator_Query(query_days):
@@ -76,7 +79,9 @@ class Query():
                 data = r.json()
                 objects = data['objects']
                 api_url = r.links['next']['url']
-                Query.Query_Paging(objects, api_url, xheaders, limit, formatting, pathing)
+                object_list = Query.query_paginated(api_url, xheaders)
+                objects.extend(object_list)
+                DataManager.Format_Data(objects, formatting, pathing)
 
     def Report_Query(query_days):
         formatting =  [
@@ -120,13 +125,18 @@ class Query():
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
         }
-        r = requests.get(api_url,headers=xheaders,data=payload)
+        r = requests.get(api_url, headers=xheaders, data=payload)
+        if r.status_code == 204:
+                print('Query Complete')
         if r.status_code != 200:
-            raise Exception(r.text)
+                print(r.status_code)
         if r.status_code == 200:
-            data = r.json()
-            objects = data['objects']
-            DataManager.Format_Data(objects, formatting, pathing)
+                data = r.json()
+                objects = data['objects']
+                api_url = r.links['next']['url']
+                object_list = Query.query_paginated(api_url, xheaders)
+                objects.extend(object_list)
+                DataManager.Format_Data(objects, formatting, pathing)
         
 
     def Permissions_Query():
@@ -167,8 +177,8 @@ class DataManager():
         dataset = pd.DataFrame(data)
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
         out_file = f"{out_path}{pathing}{d}.csv"
-        queries + 1
-        print(out_file)
+
+        print(f'Saving to: {out_file}\n')
         try:
             dataset.to_csv(out_file)
         except Exception as e:
@@ -211,7 +221,6 @@ class Admin():
             f'''
             Queries this session: {queries}\n
             Queries remaining today: {qd}\n
-            Data pulled on {d}: {file_size_daily} bytes\n
             Total Data pulled: {file_size_total}\n
         ''')
         
