@@ -1,6 +1,7 @@
 #! /usr/env/python
 
 import os, requests, json, sys
+from os import system, name
 import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
@@ -19,7 +20,7 @@ api_priv=os.environ.get('PRIV')
 out_path=os.environ.get('OUTPATH')
 app_name=os.environ.get('APP_NAME')
 api_token=''
-
+queries = 0
 class Query():    
    
     def Indicator_Query(query_days):
@@ -143,9 +144,11 @@ class DataManager():
 
      
      def Format_Data(data, formatting, pathing):
+        global queries
         dataset = pd.DataFrame(data)
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
         out_file = f"{out_path}{pathing}{d}.csv"
+        queries + 1
         print(out_file)
         try:
             dataset.to_csv(out_file)
@@ -155,6 +158,32 @@ class DataManager():
 
 
 class Admin():
+
+    def clear():  
+        # for windows
+        if name == 'nt':
+            _ = system('cls')
+    
+        # for mac and linux(here, os.name is 'posix')
+        else:
+            _ = system('clear')
+
+    def stats_tracker():
+        d = datetime.now().strftime("%Y%m%d")
+        file_size_daily = os.path.getsize(f"{out_path}/Reports/{d}*")
+        file_size_daily += os.path.getsize(f"{out_path}/Indicators/{d}*")
+        file_size_total = os.path.getsize(f"{out_path}/Reports/")
+        file_size_total = os.path.getsize(f"{out_path}/Reports/Indicators/")
+        qd = 50000 - queries
+        clear()
+        print(
+            f'''
+            Queries this session: {queries}
+            Queries remaining today: {qd}
+            Data pulled on {d}: {file_size_daily} bytes
+            Total Data pulled: {file_size_total}
+        ''')
+        
     
     def path_check():
         r = os.path.isdir(f'{out_path}/Reports')
