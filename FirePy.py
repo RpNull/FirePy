@@ -1,6 +1,6 @@
 #! /usr/env/python
 
-import os, requests, json, sys
+import os, requests, json, sys, glob
 from os import system, name
 import pandas as pd
 from requests.auth import HTTPBasicAuth
@@ -21,8 +21,24 @@ out_path=os.environ.get('OUTPATH')
 app_name=os.environ.get('APP_NAME')
 api_token=''
 queries = 0
-class Query():    
-   
+class Query():
+
+    def Query_Paging(objects, api_url, headers, formatting, pathing):
+        while(True):
+            r = requests.get(api_url, headers=headers)
+            if r.status_code == 204:
+                data = r.json()
+                objects.append(data['objects'])
+                DataManager.Format_data(objects, formatting, pathing)
+                print('Query Complete')
+            if r.status_code != 200:
+                print(r.status_code)
+            if r.status_code == 200:
+                data = r.json()
+                objects.append(data['objects'])
+                api_url = r.links['next']['url']
+
+
     def Indicator_Query(query_days):
         formatting = [
             "id", 
@@ -40,9 +56,10 @@ class Query():
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
         epoch = DataManager.Epoch_Fetch(query_days)
         ##APIv3 Limitation length:1000 for Indicators
+        limit = 1000
         payload = {
             'added_after': f'{epoch}',
-            'length': '1000',
+            'length': f'{limit}',
             'match_status': 'active'
         }
         xheaders = {
@@ -51,12 +68,15 @@ class Query():
             'Authorization': f'Bearer {api_token}'
             }
         r = requests.get(api_url, headers=xheaders, data=payload)
+        if r.status_code == 204:
+                print('Query Complete')
         if r.status_code != 200:
-            raise Exception(r.text)
+                print(r.status_code)
         if r.status_code == 200:
-            data = r.json()
-            objects = data['objects']
-            DataManager.Format_Data(objects, formatting, pathing)
+                data = r.json()
+                objects = data['objects']
+                api_url = r.links['next']['url']
+                Query.Query_Paging(objects, api_url, xheaders, limit, formatting, pathing)
 
     def Report_Query(query_days):
         formatting =  [
@@ -89,18 +109,17 @@ class Query():
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
         epoch = DataManager.Epoch_Fetch(query_days)
         ##APIv3 Limitation length:100 for Reports
+        limit = 100
         payload = {
             'added_after': f'{epoch}',
-            'length': '100',
+            'length': f'{limit}',
             'match_status': 'active'
         }
-
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
-            }
-
+        }
         r = requests.get(api_url,headers=xheaders,data=payload)
         if r.status_code != 200:
             raise Exception(r.text)
@@ -116,7 +135,7 @@ class Query():
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': 'f{app_name}',
             'Authorization': f'Bearer {api_token}'
-            }
+        }
         r = requests.get(api_url, headers=xheaders)
         data = r.json()
         print(f'{data}')
@@ -159,11 +178,23 @@ class DataManager():
 
 class Admin():
 
+    def merge():
+        extensions = 'csv'
+        os.chdir(f'{out_path}/Indicators/')
+        all_files = [ i for i in glob.glob('*.{}'.format(extensions))]
+        combined_csv = pd.concat([pd.read_csv(f) for f in all_files ])
+        combined_csv.to_csv( "Combined_Indicators.csv", index=False, encoding='utf-8-sig')
+        os.chdir(f'{out_path}/Reports/')
+        all_files = [ i for i in glob.glob('*.{}'.format(extensions))]
+        combined_csv = pd.concat([pd.read_csv(f) for f in all_files ])
+        combined_csv.to_csv( "Merged_Reports.csv", index=False, encoding='utf-8-sig')
+
+
+
     def clear():  
         # for windows
         if name == 'nt':
-            _ = system('cls')
-    
+            _ = system('cls')  
         # for mac and linux(here, os.name is 'posix')
         else:
             _ = system('clear')
@@ -175,13 +206,13 @@ class Admin():
         file_size_total = os.path.getsize(f"{out_path}/Reports/")
         file_size_total = os.path.getsize(f"{out_path}/Reports/Indicators/")
         qd = 50000 - queries
-        clear()
+        Admin.clear()
         print(
             f'''
-            Queries this session: {queries}
-            Queries remaining today: {qd}
-            Data pulled on {d}: {file_size_daily} bytes
-            Total Data pulled: {file_size_total}
+            Queries this session: {queries}\n
+            Queries remaining today: {qd}\n
+            Data pulled on {d}: {file_size_daily} bytes\n
+            Total Data pulled: {file_size_total}\n
         ''')
         
     
@@ -201,6 +232,7 @@ class Admin():
                 1) Query Indicators\n
                 2) Query Reports\n
                 3) Query Permissions (Troubleshooting)\n
+                4) Merge CSVs, Exit\n
                 X) Exit program\n
                 '''
             )
@@ -224,12 +256,19 @@ class Admin():
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+            elif choice == '4':
+                try:
+                    Admin.merge()
+                    sys.exit(0)
+                except Exception as e:
+                    print(e)
+                    print(f'Merge failed.')
             elif choice == 'X':
                 looping = False
                 print(f'Exiting.\n')
                 sys.exit(0)
             else:
-                print(f'{choice} is not a valid option, please make a selection\n')
+                print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉:')
 
 def main():
     Admin.path_check()
