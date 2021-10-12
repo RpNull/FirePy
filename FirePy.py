@@ -35,6 +35,7 @@ class Query():
                 break
 
             url = response.links["next"]["url"]
+            print(url)
             queries += 1
             stat = len(output_list)
             print(f'Queries made: {queries}\nObjects retrieved: {stat}')
@@ -43,6 +44,7 @@ class Query():
 
 
     def Indicator_Query(query_days):
+        global queries
         formatting = [
             "id", 
             "name",
@@ -63,14 +65,14 @@ class Query():
         payload = {
             'added_after': f'{epoch}',
             'length': f'{limit}',
-            'match_status': 'active'
+            'match.status': 'active'
         }
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
             }
-        r = requests.get(api_url, headers=xheaders, data=payload)
+        r = requests.get(api_url, headers=xheaders, params=payload)
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
@@ -79,11 +81,13 @@ class Query():
                 data = r.json()
                 objects = data['objects']
                 api_url = r.links['next']['url']
+                queries += 1
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
                 DataManager.Format_Data(objects, formatting, pathing)
 
     def Report_Query(query_days):
+        global queries
         formatting =  [
             "id", 
             "name", 
@@ -118,19 +122,24 @@ class Query():
         payload = {
             'added_after': f'{epoch}',
             'length': f'{limit}',
-            'match_status': 'active'
+            'match.status': 'active'
         }
+        print(f'{payload}')
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
         }
-        r = requests.get(api_url, headers=xheaders, data=payload)
+        r = requests.get(api_url, headers=xheaders, params=payload)
+        print(r.request.url)
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
+                data = r.json()
                 print(r.status_code)
+                print(data)                
         if r.status_code == 200:
+                queries += 1
                 data = r.json()
                 objects = data['objects']
                 api_url = r.links['next']['url']
@@ -143,12 +152,13 @@ class Query():
         api_url = 'https://api.intelligence.fireeye.com/permissions'
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
-            'X-App-Name': 'f{app_name}',
+            'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
         }
         r = requests.get(api_url, headers=xheaders)
         data = r.json()
         print(f'{data}')
+    
 
 class DataManager():
 
@@ -211,10 +221,8 @@ class Admin():
 
     def stats_tracker():
         d = datetime.now().strftime("%Y%m%d")
-        file_size_daily = os.path.getsize(f"{out_path}/Reports/{d}*")
-        file_size_daily += os.path.getsize(f"{out_path}/Indicators/{d}*")
-        file_size_total = os.path.getsize(f"{out_path}/Reports/")
-        file_size_total = os.path.getsize(f"{out_path}/Reports/Indicators/")
+        file_size_total = os.path.getsize(f"{out_path}Reports/")
+        file_size_total = os.path.getsize(f"{out_path}Indicators/")
         qd = 50000 - queries
         Admin.clear()
         print(
@@ -226,14 +234,15 @@ class Admin():
         
     
     def path_check():
-        r = os.path.isdir(f'{out_path}/Reports')
-        i = os.path.isdir(f'{out_path}/Indicators')
+        r = os.path.isdir(f'{out_path}Reports')
+        i = os.path.isdir(f'{out_path}Indicators')
         if r is False:
             os.mkdir(f'{out_path}/Reports')
         if i is False:
             os.mkdir(f'{out_path}/Indicators')
     
     def menu():
+        Admin.stats_tracker()
         looping = True
         while looping:
             choice=input(
