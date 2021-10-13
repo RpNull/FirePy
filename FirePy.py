@@ -23,6 +23,7 @@ api_token=''
 queries = 0
 class Query():
 
+
     def query_paginated(url: str, xheaders) -> list:
         global queries
         output_list = []
@@ -31,15 +32,14 @@ class Query():
             data = response.json()
             output_list.extend(data.get("objects", []))
             if not response.links or response.status_code == 204:
-                print(response.status_code)
+                print(f'Server Returned: {response.status_code}')
                 break
-
+            Admin.clear()
             url = response.links["next"]["url"]
-            print(url)
+            print(f'Sending Query: {url}\n')
             queries += 1
             stat = len(output_list)
             print(f'Queries made: {queries}\nObjects retrieved: {stat}')
-        print(len(output_list))
         return output_list
 
 
@@ -73,18 +73,22 @@ class Query():
             'Authorization': f'Bearer {api_token}'
             }
         r = requests.get(api_url, headers=xheaders, params=payload)
+        print(f'Sending Query: {r.request.url}')
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
-                print(r.status_code)
+                print(f'Server returned: {r.status_code}')
         if r.status_code == 200:
                 data = r.json()
                 objects = data['objects']
                 api_url = r.links['next']['url']
                 queries += 1
+                cobj = len(objects)
+                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
                 DataManager.Format_Data(objects, formatting, pathing)
+
 
     def Report_Query(query_days):
         global queries
@@ -124,25 +128,27 @@ class Query():
             'length': f'{limit}',
             'match.status': 'active'
         }
-        print(f'{payload}')
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
         }
         r = requests.get(api_url, headers=xheaders, params=payload)
-        print(r.request.url)
+        print(f'Sending Query: {r.request.url}')
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
                 data = r.json()
-                print(r.status_code)
+                print(f'Server returned: {r.status_code}')
                 print(data)                
         if r.status_code == 200:
                 queries += 1
                 data = r.json()
                 objects = data['objects']
                 api_url = r.links['next']['url']
+                queries += 1
+                cobj = len(objects)
+                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
                 DataManager.Format_Data(objects, formatting, pathing)
@@ -160,7 +166,9 @@ class Query():
         print(f'{data}')
     
 
+
 class DataManager():
+
 
      def Token():
         global api_token
@@ -175,6 +183,7 @@ class DataManager():
         p = data.get("token_type")
         print(f'Token Type: {p}\nToken Value = {api_token}')
         return(token_expire)
+
 
      def Epoch_Fetch(query_days):
         d = datetime.now()
@@ -196,7 +205,9 @@ class DataManager():
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
 
 
+
 class Admin():
+
 
     def merge():
         extensions = 'csv'
@@ -210,7 +221,6 @@ class Admin():
         combined_csv.to_csv( "Merged_Reports.csv", index=False, encoding='utf-8-sig')
 
 
-
     def clear():  
         # for windows
         if name == 'nt':
@@ -219,10 +229,11 @@ class Admin():
         else:
             _ = system('clear')
 
+
     def stats_tracker():
         d = datetime.now().strftime("%Y%m%d")
-        file_size_total = os.path.getsize(f"{out_path}Reports/")
-        file_size_total = os.path.getsize(f"{out_path}Indicators/")
+        file_size_total = (os.path.getsize(f"{out_path}Reports/")-4096)
+        file_size_total = (os.path.getsize(f"{out_path}Indicators/")-4096)
         qd = 50000 - queries
         Admin.clear()
         print(
@@ -230,6 +241,7 @@ class Admin():
             Queries this session: {queries}\n
             Queries remaining today: {qd}\n
             Total Data pulled: {file_size_total}\n
+            Files Written to: {out_path}\n
         ''')
         
     
@@ -241,10 +253,11 @@ class Admin():
         if i is False:
             os.mkdir(f'{out_path}/Indicators')
     
+
     def menu():
-        Admin.stats_tracker()
         looping = True
         while looping:
+            Admin.stats_tracker()
             choice=input(
                 '''
                 1) Query Indicators\n
@@ -288,6 +301,9 @@ class Admin():
             else:
                 print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉:')
 
+
+
+
 def main():
     Admin.path_check()
     try:
@@ -297,6 +313,7 @@ def main():
         sys.exit(0)
     print(f'Token expires in {exp} hours\n')
     Admin.menu()
+
 
 
 main()
