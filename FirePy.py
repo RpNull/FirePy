@@ -6,6 +6,7 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from tkinter import *
 #        File Name      : FirePy.py
 #        Version        : v.0.12
 #        Author         : RpNull
@@ -31,11 +32,10 @@ class Query():
             data = response.json()
             output_list.extend(data.get("objects", []))
             if not response.links or response.status_code == 204:
-                print(response.status_code)
                 break
 
             url = response.links["next"]["url"]
-            print(url)
+            print(f'Sending Query: {url}')
             queries += 1
             stat = len(output_list)
             print(f'Queries made: {queries}\nObjects retrieved: {stat}')
@@ -73,10 +73,11 @@ class Query():
             'Authorization': f'Bearer {api_token}'
             }
         r = requests.get(api_url, headers=xheaders, params=payload)
+        print(f'Sending Query: {r.request.url}\n')
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
-                print(r.status_code)
+                print(r.json())
         if r.status_code == 200:
                 data = r.json()
                 objects = data['objects']
@@ -124,19 +125,17 @@ class Query():
             'length': f'{limit}',
             'match.status': 'active'
         }
-        print(f'{payload}')
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
             'X-App-Name': f'{app_name}',
             'Authorization': f'Bearer {api_token}'
         }
         r = requests.get(api_url, headers=xheaders, params=payload)
-        print(r.request.url)
+        print(f'Sending Query: {r.request.url}')
         if r.status_code == 204:
                 print('Query Complete')
         if r.status_code != 200:
                 data = r.json()
-                print(r.status_code)
                 print(data)                
         if r.status_code == 200:
                 queries += 1
@@ -188,7 +187,7 @@ class DataManager():
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
         out_file = f"{out_path}{pathing}{d}.csv"
 
-        print(f'Saving to: {out_file}\n')
+        print(f'Saving to: {out_file}\n\n\n>>READY FOR NEXT QUERY<<')
         try:
             dataset.to_csv(out_file)
         except Exception as e:
@@ -240,63 +239,3 @@ class Admin():
             os.mkdir(f'{out_path}/Reports')
         if i is False:
             os.mkdir(f'{out_path}/Indicators')
-    
-    def menu():
-        Admin.stats_tracker()
-        looping = True
-        while looping:
-            choice=input(
-                '''
-                1) Query Indicators\n
-                2) Query Reports\n
-                3) Query Permissions (Troubleshooting)\n
-                4) Merge CSVs, Exit\n
-                X) Exit program\n
-                '''
-            )
-            if choice == '1':
-                query_days = int(input('How many days would you like to query? \n'))
-                try:
-                    Query.Indicator_Query(query_days)
-                except Exception as e:
-                    print(e)
-                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-            elif choice == '2':
-                query_days = int(input('How many days would you like to query? \n'))
-                try:
-                    Query.Report_Query(query_days)
-                except Exception as e:
-                    print(e)
-                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-            elif choice == '3':
-                try:
-                    Query.Permissions_Query()
-                except Exception as e:
-                    print(e)
-                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-            elif choice == '4':
-                try:
-                    Admin.merge()
-                    sys.exit(0)
-                except Exception as e:
-                    print(e)
-                    print(f'Merge failed.')
-            elif choice == 'X':
-                looping = False
-                print(f'Exiting.\n')
-                sys.exit(0)
-            else:
-                print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉:')
-
-def main():
-    Admin.path_check()
-    try:
-        exp = DataManager.Token()
-    except:
-        print(f'Unable to fetch token, please confirm required variables are placed in your .env file')
-        sys.exit(0)
-    print(f'Token expires in {exp} hours\n')
-    Admin.menu()
-
-
-main()
