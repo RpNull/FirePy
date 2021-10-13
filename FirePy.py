@@ -6,13 +6,19 @@ import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+
+
+
 #        File Name      : FirePy.py
-#        Version        : v.0.12
+#        Version        : v1.0
 #        Author         : RpNull
 #        Prerequisite   : Python3
 #        Created        : 30 Sep 21
-#        Change Date    : 8 Oct 21
+#        Change Date    : 12 Oct 21
 #        Online version : github.com/RpNull/FirePy
+
+
+
 
 load_dotenv()
 api_pub=os.environ.get('PUB')
@@ -21,6 +27,9 @@ out_path=os.environ.get('OUTPATH')
 app_name=os.environ.get('APP_NAME')
 api_token=''
 queries = 0
+
+
+
 class Query():
 
 
@@ -163,7 +172,8 @@ class Query():
         }
         r = requests.get(api_url, headers=xheaders)
         data = r.json()
-        print(f'{data}')
+        print(f'Permissions for {api_token}:\n{data}\n\n\n')
+        input("Press any key to return to main menu.\n")
     
 
 
@@ -185,7 +195,7 @@ class DataManager():
         return(token_expire)
 
 
-     def Epoch_Fetch(query_days):
+     def Epoch_Fetch(query_days) -> int:
         d = datetime.now()
         p = str((d - timedelta(days=query_days)).timestamp())
         return p
@@ -197,9 +207,10 @@ class DataManager():
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
         out_file = f"{out_path}{pathing}{d}.csv"
 
-        print(f'Saving to: {out_file}\n')
+        print(f'Saving to: {out_file}\n\n\n')
         try:
             dataset.to_csv(out_file)
+            input("Press any key to return to main menu.\n")
         except Exception as e:
             print(e)
             print(f'Writing to {out_path} failed, please check permissions and write locks.')
@@ -268,6 +279,7 @@ class Admin():
                 '''
             )
             if choice == '1':
+                Admin.clear()
                 query_days = int(input('How many days would you like to query? \n'))
                 try:
                     Query.Indicator_Query(query_days)
@@ -275,6 +287,7 @@ class Admin():
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == '2':
+                Admin.clear()
                 query_days = int(input('How many days would you like to query? \n'))
                 try:
                     Query.Report_Query(query_days)
@@ -282,12 +295,14 @@ class Admin():
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == '3':
+                Admin.clear()
                 try:
                     Query.Permissions_Query()
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == '4':
+                Admin.clear()
                 try:
                     Admin.merge()
                     sys.exit(0)
