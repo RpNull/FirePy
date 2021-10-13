@@ -1,15 +1,16 @@
 #! /usr/env/python
 
+import sys
 import os 
 from os import system, name
+from dotenv import load_dotenv
+from datetime import datetime, timedelta
 import requests
-import sys
+from requests.auth import HTTPBasicAuth
 import glob
 import json
 import pandas as pd
-from requests.auth import HTTPBasicAuth
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
+
 
 
 
@@ -113,7 +114,7 @@ class Query():
             "modified", 
             "published", 
             "object_refs", 
-            "description", 
+            "description",
             "x_fireeye_com_tracking_info.document_id", 
             "x_fireeye_com_metadata.report_type", 
             "x_fireeye_com_metadata.affected_it_systems", 
@@ -165,7 +166,54 @@ class Query():
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
                 DataManager.format_data(objects, formatting, pathing)
-        
+
+
+    def alerts_query(query_days):
+        global queries
+        formatting = [
+            "id", 
+            "name",
+            "created", 
+            "modified",
+            "valid_from", 
+            "valid_until", 
+            "confidence",
+            "description", 
+            "pattern", 
+            "labels"
+        ]
+        pathing = 'Alerts/'
+        api_url = 'https://api.intelligence.fireeye.com/collections/alerts/objects'
+        epoch = DataManager.epoch_fetch(query_days)
+        ##APIv3 Limitation length:100 for Alerts
+        limit = 100
+        payload = {
+            'added_after': f'{epoch}',
+            'length': f'{limit}',
+
+        }
+        xheaders = {
+            'Accept': 'application/stix+json; version=2.1',
+            'X-App-Name': f'{app_name}',
+            'Authorization': f'Bearer {api_token}'
+            }
+        r = requests.get(api_url, headers=xheaders, params=payload)
+        print(f'Sending Query: {r.request.url}')
+        if r.status_code == 204:
+                print('Query Complete')
+        if r.status_code != 200:
+                print(f'Server returned: {r.status_code}')
+        if r.status_code == 200:
+                data = r.json()
+                objects = data['objects']
+                api_url = r.links['next']['url']
+                queries += 1
+                cobj = len(objects)
+                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
+                object_list = Query.query_paginated(api_url, xheaders)
+                objects.extend(object_list)
+                DataManager.format_data(objects, formatting, pathing)
+
 
     def permissions_query():
         api_url = 'https://api.intelligence.fireeye.com/permissions'
@@ -234,6 +282,10 @@ class Admin():
         all_files = [ i for i in glob.glob('*.{}'.format(extensions))]
         combined_csv = pd.concat([pd.read_csv(f) for f in all_files ])
         combined_csv.to_csv( "Merged_Reports.csv", index=False, encoding='utf-8-sig')
+        os.chdir(f'{out_path}/Alerts/')
+        all_files = [ i for i in glob.glob('*.{}'.format(extensions))]
+        combined_csv = pd.concat([pd.read_csv(f) for f in all_files ])
+        combined_csv.to_csv( "Merged_Alerts.csv", index=False, encoding='utf-8-sig')
 
 
     def clear():  
@@ -248,7 +300,8 @@ class Admin():
     def stats_tracker():
         d = datetime.now().strftime("%Y%m%d")
         file_size_total = (os.path.getsize(f"{out_path}Reports/")-4096)
-        file_size_total = (os.path.getsize(f"{out_path}Indicators/")-4096)
+        file_size_total += (os.path.getsize(f"{out_path}Indicators/")-4096)
+        file_size_total += (os.path.getsize(f"{out_path}Alerts/")-4096)
         qd = 50000 - queries
         Admin.clear()
         print(
@@ -263,11 +316,14 @@ class Admin():
     def path_check():
         r = os.path.isdir(f'{out_path}Reports')
         i = os.path.isdir(f'{out_path}Indicators')
+        a = os.path.isdir(f'{out_path}Alerts')
         if r is False:
-            os.mkdir(f'{out_path}/Reports')
+            os.mkdir(f'{out_path}Reports')
         if i is False:
-            os.mkdir(f'{out_path}/Indicators')
-    
+            os.mkdir(f'{out_path}Indicators')
+        if a is False:
+            os.mkdir(f'{out_path}Alerts')
+
 
     def menu():
         looping = True
@@ -275,10 +331,11 @@ class Admin():
             Admin.stats_tracker()
             choice=input(
                 '''
-                1) Query Indicators\n
-                2) Query Reports\n
-                3) Query Permissions (Troubleshooting)\n
-                4) Merge CSVs, Exit\n
+                1) Query Indicators Endpoint\n
+                2) Query Reports Endpoint\n
+                3) Query Alerts Endpoint\n
+                4) Query Permissions Endpoint (Troubleshooting)\n
+                5) Merge CSVs, Exit\n
                 X) Exit program\n
                 '''
             )
@@ -300,12 +357,20 @@ class Admin():
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == '3':
                 Admin.clear()
+                query_days = int(input('How many days would you like to query? \n'))
+                try:
+                    Query.alerts_query(query_days)
+                except Exception as e:
+                    print(e)
+                    print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
+            elif choice == '4':
+                Admin.clear()
                 try:
                     Query.permissions_query()
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
-            elif choice == '4':
+            elif choice == '5':
                 Admin.clear()
                 try:
                     Admin.merge()
@@ -320,7 +385,6 @@ class Admin():
             else:
                 print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉\n\n\n')
                 input("Press any key to return to main menu.\n")
-
 
 
 
