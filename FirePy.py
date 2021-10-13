@@ -1,7 +1,11 @@
 #! /usr/env/python
 
-import os, requests, json, sys, glob
+import os 
 from os import system, name
+import requests
+import sys
+import glob
+import json
 import pandas as pd
 from requests.auth import HTTPBasicAuth
 from datetime import datetime, timedelta
@@ -52,7 +56,7 @@ class Query():
         return output_list
 
 
-    def Indicator_Query(query_days):
+    def indicator_query(query_days):
         global queries
         formatting = [
             "id", 
@@ -68,7 +72,7 @@ class Query():
         ]
         pathing = 'Indicators/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
-        epoch = DataManager.Epoch_Fetch(query_days)
+        epoch = DataManager.epoch_fetch(query_days)
         ##APIv3 Limitation length:1000 for Indicators
         limit = 1000
         payload = {
@@ -96,10 +100,10 @@ class Query():
                 print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
-                DataManager.Format_Data(objects, formatting, pathing)
+                DataManager.format_data(objects, formatting, pathing)
 
 
-    def Report_Query(query_days):
+    def report_query(query_days):
         global queries
         formatting =  [
             "id", 
@@ -129,7 +133,7 @@ class Query():
         ]
         pathing = 'Reports/'
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
-        epoch = DataManager.Epoch_Fetch(query_days)
+        epoch = DataManager.epoch_fetch(query_days)
         ##APIv3 Limitation length:100 for Reports
         limit = 100
         payload = {
@@ -160,10 +164,10 @@ class Query():
                 print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
                 object_list = Query.query_paginated(api_url, xheaders)
                 objects.extend(object_list)
-                DataManager.Format_Data(objects, formatting, pathing)
+                DataManager.format_data(objects, formatting, pathing)
         
 
-    def Permissions_Query():
+    def permissions_query():
         api_url = 'https://api.intelligence.fireeye.com/permissions'
         xheaders = {
             'Accept': 'application/stix+json; version=2.1',
@@ -180,7 +184,7 @@ class Query():
 class DataManager():
 
 
-     def Token():
+     def token():
         global api_token
         api_url="https://api.intelligence.fireeye.com/token"
         headers = {
@@ -195,13 +199,13 @@ class DataManager():
         return(token_expire)
 
 
-     def Epoch_Fetch(query_days) -> int:
+     def epoch_fetch(query_days) -> str:
         d = datetime.now()
         p = str((d - timedelta(days=query_days)).timestamp())
         return p
 
      
-     def Format_Data(data, formatting, pathing):
+     def format_data(data, formatting, pathing):
         global queries
         dataset = pd.DataFrame(data)
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -282,7 +286,7 @@ class Admin():
                 Admin.clear()
                 query_days = int(input('How many days would you like to query? \n'))
                 try:
-                    Query.Indicator_Query(query_days)
+                    Query.indicator_query(query_days)
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
@@ -290,14 +294,14 @@ class Admin():
                 Admin.clear()
                 query_days = int(input('How many days would you like to query? \n'))
                 try:
-                    Query.Report_Query(query_days)
+                    Query.report_query(query_days)
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
             elif choice == '3':
                 Admin.clear()
                 try:
-                    Query.Permissions_Query()
+                    Query.permissions_query()
                 except Exception as e:
                     print(e)
                     print('Query failed, please confirm API keys and enviromental variables. Exiting\n')
@@ -314,7 +318,8 @@ class Admin():
                 print(f'Exiting.\n')
                 sys.exit(0)
             else:
-                print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉:')
+                print(f'{choice} is not a valid option, please make a selection\nNote: "X" must be capitalized to exit 😉\n\n\n')
+                input("Press any key to return to main menu.\n")
 
 
 
@@ -322,7 +327,7 @@ class Admin():
 def main():
     Admin.path_check()
     try:
-        exp = DataManager.Token()
+        exp = DataManager.token()
     except:
         print(f'Unable to fetch token, please confirm required variables are placed in your .env file')
         sys.exit(0)
