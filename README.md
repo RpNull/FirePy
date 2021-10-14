@@ -1,19 +1,21 @@
 # FirePy
-Query FireEye API for localized parsing.
-Basic pythonic implementation for querying the FireEye Intelligence api for mass data acquisition and localized parsing.
+Query FireEye API for MISP ingestion.
+Basic pythonic implementation for querying the FireEye Intelligence api for automated MISP injestion.
 
 
 ## Leverages:
 
   [FireEye Intel APIv3](https://api.intelligence.fireeye.com/docs#introduction-intel-apiv3)
+  [MISP](https://www.misp-project.org/documentation/)
 
 ## Requires:
   Python3.9 or newer\
-  [pandas-1.3.3](https://pandas.pydata.org/pandas-docs/stable/whatsnew/index.html)\
+  [pymisp](https://pymisp.readthedocs.io/en/latest/)\
   python-dotenv
 
 `pip3 install python-dotenv`  
-`pip3 install pandas`
+`pip3 install pymisp`
+
 
 ## Usage:
 Add required variables to your .env file, in the same directory as FirePy.\
@@ -24,24 +26,32 @@ PRIV=FireEyePrivateKeyHere
 OUTPATH=/Path/To/Output/Here/
 APP_NAME=OrganizationalNameHere
 ```
-Execute the python file FirePy.py
+Add required MISP variables to keys.py
+```
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-`python3 FirePy.py`
+misp_url = 'https:///'
+misp_key = 'Your MISP auth key' # The MISP auth key can be found on the MISP web interface under the automation section
+misp_verifycert = True
+```
 
-Output will be directed to the path declared in your .env file, seperated by asset leveraged, and saved to a csv file with todays date as it's name.
 
+Execute the python file MisPy.py
+
+`python3 MisPy.py`
+
+Output will be directed to your MISP instance as unpublished events. You can use PyMisp to automate publishing them. Replace x/y with the event ID range you wish to publish\
+```
+misp=ExpandedPyMISP(misp_url, misp_key, misp_verifycert)
+try:
+  for i in range(x,y):
+    misp.publish(i)
+except Exception as e:
+  print(e)
 
 ## Limitations:
 
 50,000 queries per day, 1000 queries per second. Reference comments in the python file for individual endpoint limitations. All lengths are set to the maximum by default.
 
-## Run as a compiled exe for immutability.
-
-Requires:
-[pyinstaller](https://pyinstaller.readthedocs.io/en/stable/)\
-Packages all dependencies and libraries into a single exe.
-
-```
-pip install pyinstaller
-pyinstaller -F --paths=<your_path>\Lib\site-packages FirePy.py
-```
+Recommended to run as schtask or cronjob.
