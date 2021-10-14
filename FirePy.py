@@ -40,11 +40,10 @@ class Query():
 
     def query_paginated(url: str, xheaders) -> list:
         global queries
-        output_list = []
+        responses = []
         while url:
             response = requests.get(url, headers = xheaders)
-            data = response.json()
-            output_list.extend(data.get("objects", []))
+            responses.append(response.json())
             if not response.links or response.status_code == 204:
                 print(f'Server Returned: {response.status_code}')
                 break
@@ -52,25 +51,12 @@ class Query():
             url = response.links["next"]["url"]
             print(f'Sending Query: {url}\n')
             queries += 1
-            stat = len(output_list)
-            print(f'Queries made: {queries}\nObjects retrieved: {stat}')
-        return output_list
+            print(f'Queries made: {queries}\n')
+        return responses
 
 
     def indicator_query(query_days):
         global queries
-        formatting = [
-            "id", 
-            "name",
-            "created", 
-            "modified",
-            "valid_from", 
-            "valid_until", 
-            "confidence",
-            "description", 
-            "pattern", 
-            "labels"
-        ]
         pathing = 'Indicators/'
         api_url = 'https://api.intelligence.fireeye.com/collections/indicators/objects'
         epoch = DataManager.epoch_fetch(query_days)
@@ -94,44 +80,17 @@ class Query():
                 print(f'Server returned: {r.status_code}')
         if r.status_code == 200:
                 data = r.json()
-                objects = data['objects']
                 api_url = r.links['next']['url']
                 queries += 1
-                cobj = len(objects)
-                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
-                object_list = Query.query_paginated(api_url, xheaders)
-                objects.extend(object_list)
-                DataManager.format_data(objects, formatting, pathing)
+                print(f'Queries made: {queries}\n')
+                data_extended = Query.query_paginated(api_url, xheaders)
+                data_extended.append(data)
+                DataManager.format_data(data_extended, pathing)
+                
 
 
     def report_query(query_days):
         global queries
-        formatting =  [
-            "id", 
-            "name", 
-            "labels", 
-            "created", 
-            "modified", 
-            "published", 
-            "object_refs", 
-            "description",
-            "x_fireeye_com_tracking_info.document_id", 
-            "x_fireeye_com_metadata.report_type", 
-            "x_fireeye_com_metadata.affected_it_systems", 
-            "x_fireeye_com_metadata.risk_rating", 
-            "x_fireeye_com_exploitation_rating", 
-            "x_fireeye_com_metadata.intended_effect", 
-            "x_fireeye_com_additional_description_sections.analysis", 
-            "x_fireeye_com_metadata.target_geographies", 
-            "x_fireeye_com_metadata.affected_industries", 
-            "x_fireeye_com_additional_description_sections.key_points", 
-            "x_fireeye_com_metadata.targeted_information", 
-            "x_fireeye_com_metadata.motivation", 
-            "x_fireeye_com_metadata.subscriptions", 
-            "x_fireeye_com_metadata.source_geographies", 
-            "x_fireeye_com_risk_rating_justification", 
-            "x_fireeye_com_metadata.affected_ot_systems"
-        ]
         pathing = 'Reports/'
         api_url = 'https://api.intelligence.fireeye.com/collections/reports/objects'
         epoch = DataManager.epoch_fetch(query_days)
@@ -156,32 +115,18 @@ class Query():
                 print(f'Server returned: {r.status_code}')
                 print(data)                
         if r.status_code == 200:
-                queries += 1
                 data = r.json()
-                objects = data['objects']
                 api_url = r.links['next']['url']
                 queries += 1
-                cobj = len(objects)
-                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
-                object_list = Query.query_paginated(api_url, xheaders)
-                objects.extend(object_list)
-                DataManager.format_data(objects, formatting, pathing)
+                print(f'Queries made: {queries}\n')
+                data_extended = Query.query_paginated(api_url, xheaders)
+                data_extended.append(data)
+                DataManager.format_data(data_extended, pathing)
+                
 
 
     def alerts_query(query_days):
         global queries
-        formatting = [
-            "id", 
-            "name",
-            "created", 
-            "modified",
-            "valid_from", 
-            "valid_until", 
-            "confidence",
-            "description", 
-            "pattern", 
-            "labels"
-        ]
         pathing = 'Alerts/'
         api_url = 'https://api.intelligence.fireeye.com/collections/alerts/objects'
         epoch = DataManager.epoch_fetch(query_days)
@@ -205,14 +150,12 @@ class Query():
                 print(f'Server returned: {r.status_code}')
         if r.status_code == 200:
                 data = r.json()
-                objects = data['objects']
                 api_url = r.links['next']['url']
                 queries += 1
-                cobj = len(objects)
-                print(f'Queries made: {queries}\nObjects retrieved: {cobj}\n')
-                object_list = Query.query_paginated(api_url, xheaders)
-                objects.extend(object_list)
-                DataManager.format_data(objects, formatting, pathing)
+                print(f'Queries made: {queries}\n')
+                data_extended = Query.query_paginated(api_url, xheaders)
+                data_extended.append(data)
+                DataManager.format_data(data_extended, pathing)
 
 
     def permissions_query():
@@ -253,15 +196,16 @@ class DataManager():
         return p
 
      
-     def format_data(data, formatting, pathing):
+     def format_data(data, pathing):
         global queries
-        dataset = pd.DataFrame(data)
+
         d = datetime.now().strftime("%Y%m%d-%H%M%S")
-        out_file = f"{out_path}{pathing}{d}.csv"
+        out_file = f"{out_path}{pathing}{d}.json"
 
         print(f'Saving to: {out_file}\n\n\n')
         try:
-            dataset.to_csv(out_file)
+            with open(out_file, 'w') as f:
+                    json.dump(data, f)
             input("Press any key to return to main menu.\n")
         except Exception as e:
             print(e)
@@ -300,8 +244,8 @@ class Admin():
     def stats_tracker():
         d = datetime.now().strftime("%Y%m%d")
         file_size_total = (os.path.getsize(f"{out_path}Reports/")-4096)
-        file_size_total += (os.path.getsize(f"{out_path}Indicators/")-4096)
-        file_size_total += (os.path.getsize(f"{out_path}Alerts/")-4096)
+        file_size_total += os.path.getsize(f"{out_path}Indicators/")
+        file_size_total += os.path.getsize(f"{out_path}Alerts/")
         qd = 50000 - queries
         Admin.clear()
         print(
